@@ -1,4 +1,4 @@
-import { FileMusic, FileText, Save, X } from 'lucide-react'
+import { FileCheck2, FileMusic, FileText, Save, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { readMusicXmlFile, type ParsedMusicXml } from '../domain/musicxml'
 import { renderPdfThumbnail } from '../domain/pdf'
@@ -23,7 +23,6 @@ export function ImportPanel({ onSaved }: ImportPanelProps) {
 
     if (!musicFile) {
       setParsed(null)
-      setTitle('')
       setError(null)
       return undefined
     }
@@ -76,12 +75,12 @@ export function ImportPanel({ onSaved }: ImportPanelProps) {
   }, [pdfFile])
 
   const canSave = useMemo(
-    () => Boolean(parsed && title.trim() && musicFile && !saving),
-    [musicFile, parsed, saving, title],
+    () => Boolean(title.trim() && !saving && (parsed || pdfFile)),
+    [parsed, pdfFile, saving, title],
   )
 
   const handleSave = async () => {
-    if (!parsed || !musicFile || !canSave) {
+    if (!canSave) {
       return
     }
 
@@ -89,13 +88,13 @@ export function ImportPanel({ onSaved }: ImportPanelProps) {
       id: crypto.randomUUID(),
       title: title.trim(),
       createdAt: new Date().toISOString(),
-      musicXml: parsed.xml,
-      musicXmlFileName: musicFile.name,
+      musicXml: parsed?.xml,
+      musicXmlFileName: musicFile?.name,
       pdf: pdfFile ?? undefined,
       pdfFileName: pdfFile?.name,
       pdfThumbnail: thumbnail,
       settings: DEFAULT_PRACTICE_SETTINGS,
-      eventCount: parsed.events.length,
+      eventCount: parsed?.events.length ?? 0,
     }
 
     setSaving(true)
@@ -109,41 +108,65 @@ export function ImportPanel({ onSaved }: ImportPanelProps) {
     setThumbnail(undefined)
   }
 
+  const handleMusicFile = (file: File | null) => {
+    setMusicFile(file)
+  }
+
+  const handlePdfFile = (file: File | null) => {
+    setPdfFile(file)
+    if (file && !title.trim()) {
+      setTitle(stripExtension(file.name))
+    }
+  }
+
+  const clearImport = () => {
+    setMusicFile(null)
+    setPdfFile(null)
+    setParsed(null)
+    setTitle('')
+    setThumbnail(undefined)
+    setError(null)
+  }
+
+  const hasPreview = Boolean(parsed || pdfFile)
+  const eventLabel = parsed ? `${parsed.events.length} playable events` : 'Reference-only PDF'
+
   return (
     <section className="tool-panel import-panel" aria-labelledby="import-title">
       <div className="panel-heading">
         <div>
           <h2 id="import-title">Import Score</h2>
-          <p>PDF + MusicXML</p>
+          <p>PDF first, MusicXML for scoring</p>
         </div>
       </div>
 
       <div className="file-grid">
         <label className="file-drop">
+          <FileText aria-hidden="true" />
+          <span>Sheet music PDF</span>
+          <input
+            type="file"
+            accept=".pdf,application/pdf"
+            onChange={(event) => handlePdfFile(event.currentTarget.files?.[0] ?? null)}
+            data-testid="pdf-input"
+          />
+        </label>
+
+        <label className="file-drop secondary">
           <FileMusic aria-hidden="true" />
           <span>MusicXML / MXL</span>
           <input
             type="file"
             accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml+xml,application/vnd.recordare.musicxml"
-            onChange={(event) => setMusicFile(event.currentTarget.files?.[0] ?? null)}
+            onChange={(event) => handleMusicFile(event.currentTarget.files?.[0] ?? null)}
             data-testid="musicxml-input"
-          />
-        </label>
-
-        <label className="file-drop secondary">
-          <FileText aria-hidden="true" />
-          <span>PDF reference</span>
-          <input
-            type="file"
-            accept=".pdf,application/pdf"
-            onChange={(event) => setPdfFile(event.currentTarget.files?.[0] ?? null)}
           />
         </label>
       </div>
 
       {error && <div className="notice error">{error}</div>}
 
-      {parsed && (
+      {hasPreview && (
         <div className="import-preview" data-testid="import-preview">
           {thumbnail ? (
             <img src={thumbnail} alt="" />
@@ -158,8 +181,12 @@ export function ImportPanel({ onSaved }: ImportPanelProps) {
               <input value={title} onChange={(event) => setTitle(event.currentTarget.value)} />
             </label>
             <div className="preview-meta">
-              <span>{parsed.events.length} playable events</span>
-              <span>{musicFile?.name}</span>
+              <span className={parsed ? 'status-pill interactive' : 'status-pill reference'}>
+                <FileCheck2 aria-hidden="true" />
+                {eventLabel}
+              </span>
+              {pdfFile && <span>{pdfFile.name}</span>}
+              {musicFile && <span>{musicFile.name}</span>}
             </div>
             <div className="preview-actions">
               <button type="button" className="primary-action" onClick={handleSave} disabled={!canSave}>
@@ -170,13 +197,7 @@ export function ImportPanel({ onSaved }: ImportPanelProps) {
                 type="button"
                 className="icon-button"
                 aria-label="Clear import"
-                onClick={() => {
-                  setMusicFile(null)
-                  setPdfFile(null)
-                  setParsed(null)
-                  setTitle('')
-                  setThumbnail(undefined)
-                }}
+                onClick={clearImport}
               >
                 <X aria-hidden="true" />
               </button>
@@ -186,4 +207,8 @@ export function ImportPanel({ onSaved }: ImportPanelProps) {
       )}
     </section>
   )
+}
+
+function stripExtension(fileName: string): string {
+  return fileName.replace(/\.[^.]+$/, '')
 }

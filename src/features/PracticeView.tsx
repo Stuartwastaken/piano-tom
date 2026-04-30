@@ -1,8 +1,9 @@
-import { Pause, RotateCcw, SlidersHorizontal, Timer, TimerOff } from 'lucide-react'
+import { FileMusic, Pause, RotateCcw, SlidersHorizontal, Sparkles, Timer, TimerOff } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EventRail } from '../components/EventRail'
+import { PdfReferenceViewer } from '../components/PdfReferenceViewer'
 import { ScoreDisplay } from '../components/ScoreDisplay'
-import { parseMusicXml } from '../domain/musicxml'
+import { parseMusicXml, readMusicXmlFile, type ParsedMusicXml } from '../domain/musicxml'
 import { beatMs, evaluatePracticeInput, shouldMarkMissed } from '../domain/scoring'
 import {
   DEFAULT_PRACTICE_SETTINGS,
@@ -17,24 +18,39 @@ import type { MidiController } from '../hooks/useMidi'
 interface PracticeViewProps {
   piece: ImportedPiece | null
   midi: MidiController
+  onUpdatePiece: (piece: ImportedPiece) => Promise<void>
 }
 
-export function PracticeView({ piece, midi }: PracticeViewProps) {
-  const parsed = useMemo(() => {
-    if (!piece) {
-      return null
+interface ParsedState {
+  parsed: ParsedMusicXml | null
+  error: string | null
+}
+
+export function PracticeView({ piece, midi, onUpdatePiece }: PracticeViewProps) {
+  const parsedState = useMemo<ParsedState>(() => {
+    if (!piece?.musicXml) {
+      return { parsed: null, error: null }
     }
 
-    return parseMusicXml(piece.musicXml, piece.title)
+    try {
+      return { parsed: parseMusicXml(piece.musicXml, piece.title), error: null }
+    } catch (error) {
+      return {
+        parsed: null,
+        error: error instanceof Error ? error.message : 'Unable to parse MusicXML.',
+      }
+    }
   }, [piece])
 
-  const events = useMemo(() => parsed?.events ?? [], [parsed])
+  const events = useMemo(() => parsedState.parsed?.events ?? [], [parsedState.parsed])
   const [settings, setSettings] = useState<PracticeSettings>(piece?.settings ?? DEFAULT_PRACTICE_SETTINGS)
   const [activeIndex, setActiveIndex] = useState(0)
   const [results, setResults] = useState<Record<string, PracticeResult>>({})
   const [playedPitches, setPlayedPitches] = useState<number[]>([])
   const [running, setRunning] = useState(false)
   const [elapsedMs, setElapsedMs] = useState(0)
+  const [attachError, setAttachError] = useState<string | null>(null)
+  const [attaching, setAttaching] = useState(false)
   const startedAtRef = useRef<number>(0)
 
   useEffect(() => {
@@ -44,7 +60,34 @@ export function PracticeView({ piece, midi }: PracticeViewProps) {
     setPlayedPitches([])
     setRunning(false)
     setElapsedMs(0)
+    setAttachError(null)
   }, [piece?.id, piece?.settings])
+
+  const handleAttachMusicXml = useCallback(
+    async (file: File | null) => {
+      if (!piece || !file) {
+        return
+      }
+
+      setAttaching(true)
+      setAttachError(null)
+
+      try {
+        const nextParsed = await readMusicXmlFile(file)
+        await onUpdatePiece({
+          ...piece,
+          musicXml: nextParsed.xml,
+          musicXmlFileName: file.name,
+          eventCount: nextParsed.events.length,
+        })
+      } catch (error) {
+        setAttachError(error instanceof Error ? error.message : 'Unable to attach MusicXML.')
+      } finally {
+        setAttaching(false)
+      }
+    },
+    [onUpdatePiece, piece],
+  )
 
   useEffect(() => {
     if (!running || !settings.timingEnabled) {
@@ -133,11 +176,60 @@ export function PracticeView({ piece, midi }: PracticeViewProps) {
     setRunning(false)
   }, [events, settings])
 
-  if (!piece || !parsed) {
+  if (!piece) {
     return (
       <section className="workspace-empty">
         <h2>Practice</h2>
         <p>Select a saved piece from the library.</p>
+      </section>
+    )
+  }
+
+  if (!piece.musicXml || parsedState.error || !parsedState.parsed) {
+    return (
+      <section className="practice-view">
+        <div className="practice-toolbar">
+          <div>
+            <h2>{piece.title}</h2>
+            <p>{piece.pdfFileName ?? 'Reference score'}</p>
+          </div>
+          <label className="primary-action file-action">
+            <FileMusic aria-hidden="true" />
+            {attaching ? 'Reading score' : 'Attach MusicXML'}
+            <input
+              type="file"
+              accept=".musicxml,.xml,.mxl,application/vnd.recordare.musicxml+xml,application/vnd.recordare.musicxml"
+              onChange={(event) => {
+                void handleAttachMusicXml(event.currentTarget.files?.[0] ?? null)
+                event.currentTarget.value = ''
+              }}
+              data-testid="attach-musicxml-input"
+            />
+          </label>
+        </div>
+
+        <div className="prep-grid">
+          <section className="prep-panel">
+            <div className="prep-kicker">
+              <Sparkles aria-hidden="true" />
+              Reference mode
+            </div>
+            <h3>Ready for score prep</h3>
+            <p>
+              The PDF is preserved for reading. Interactive green/red feedback unlocks when a
+              matching MusicXML or MXL export is attached.
+            </p>
+            {parsedState.error && <div className="notice error">{parsedState.error}</div>}
+            {attachError && <div className="notice error">{attachError}</div>}
+            <div className="prep-steps">
+              <span>1 PDF loaded</span>
+              <span className={piece.musicXml ? 'complete' : ''}>2 MusicXML attached</span>
+              <span className={piece.musicXml ? 'complete' : ''}>3 MIDI practice ready</span>
+            </div>
+          </section>
+
+          <PdfReferenceViewer pdf={piece.pdf} title={piece.title} />
+        </div>
       </section>
     )
   }

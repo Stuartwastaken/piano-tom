@@ -13,8 +13,8 @@ export interface ImportedPiece {
   id: string
   title: string
   createdAt: string
-  musicXml: string
-  musicXmlFileName: string
+  musicXml?: string
+  musicXmlFileName?: string
   pdf?: Blob
   pdfFileName?: string
   pdfThumbnail?: string

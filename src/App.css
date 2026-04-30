@@ -330,8 +330,39 @@ nav button:hover {
   color: var(--muted);
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 12px;
+  gap: 8px;
   font-size: 13px;
+}
+
+.status-pill {
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 999px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.status-pill svg {
+  width: 13px;
+  height: 13px;
+}
+
+.status-pill.interactive {
+  border-color: #86efac;
+  background: var(--green-bg);
+  color: var(--green);
+}
+
+.status-pill.reference {
+  border-color: #fcd34d;
+  background: var(--amber-bg);
+  color: var(--amber);
 }
 
 .preview-actions,
@@ -379,6 +410,18 @@ nav button:hover {
   border-color: var(--line);
 }
 
+.file-action {
+  position: relative;
+  overflow: hidden;
+}
+
+.file-action input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .icon-button.danger:hover {
   color: var(--red);
   border-color: #fecaca;
@@ -416,6 +459,13 @@ nav button:hover {
   font-size: 16px;
 }
 
+.piece-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .piece-body {
   min-width: 0;
   display: grid;
@@ -445,6 +495,76 @@ nav button:hover {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.prep-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.prep-panel {
+  position: sticky;
+  top: 96px;
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+  padding: 18px;
+}
+
+.prep-kicker {
+  width: max-content;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+  padding: 5px 9px;
+  font-size: 12px;
+}
+
+.prep-kicker svg {
+  width: 14px;
+  height: 14px;
+}
+
+.prep-panel h3 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.prep-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.prep-steps {
+  display: grid;
+  gap: 8px;
+}
+
+.prep-steps span {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 0 10px;
+  color: var(--muted);
+  background: #f8fafc;
+}
+
+.prep-steps span:first-child,
+.prep-steps span.complete {
+  color: var(--green);
+  border-color: #bbf7d0;
+  background: #f0fdf4;
 }
 
 .settings-row {
@@ -500,6 +620,83 @@ nav button:hover {
 .score-host {
   min-width: 780px;
   padding: 20px;
+}
+
+.pdf-reference {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.pdf-toolbar {
+  min-height: 54px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 10px 8px 14px;
+}
+
+.pdf-toolbar strong,
+.pdf-toolbar span {
+  display: block;
+}
+
+.pdf-toolbar span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.pdf-scroll {
+  position: relative;
+  max-height: calc(100svh - 190px);
+  overflow: auto;
+  display: grid;
+  gap: 18px;
+  justify-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #dfe5ea;
+  padding: 18px;
+}
+
+.pdf-page {
+  margin: 0;
+  display: grid;
+  gap: 8px;
+  justify-items: center;
+}
+
+.pdf-page canvas {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: 0 12px 34px rgba(15, 23, 42, 0.18);
+}
+
+.pdf-page figcaption {
+  color: #475569;
+  font-size: 12px;
+}
+
+.pdf-empty {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted);
+}
+
+.pdf-empty svg {
+  width: 28px;
+  height: 28px;
 }
 
 .practice-footer,
@@ -676,8 +873,13 @@ nav button:hover {
   }
 
   .workspace-grid,
-  .reading-meta {
+  .reading-meta,
+  .prep-grid {
     grid-template-columns: 1fr;
+  }
+
+  .prep-panel {
+    position: static;
   }
 }
 

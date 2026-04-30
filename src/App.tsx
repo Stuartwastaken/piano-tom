@@ -8,7 +8,7 @@ import { PracticeView } from './features/PracticeView'
 import { ReadingPractice } from './features/ReadingPractice'
 import { ScalePractice } from './features/ScalePractice'
 import { useMidi } from './hooks/useMidi'
-import { deletePiece, listPieces } from './storage/db'
+import { deletePiece, listPieces, savePiece } from './storage/db'
 import type { ImportedPiece } from './domain/types'
 
 type AppView = 'library' | 'practice' | 'scales' | 'reading'
@@ -53,6 +53,14 @@ function App() {
     await deletePiece(pieceId)
     setPieces((current) => current.filter((piece) => piece.id !== pieceId))
     setSelectedPieceId((current) => (current === pieceId ? null : current))
+  }
+
+  const handleUpdatePiece = async (piece: ImportedPiece) => {
+    await savePiece(piece)
+    setPieces((current) =>
+      current.map((candidate) => (candidate.id === piece.id ? piece : candidate)),
+    )
+    setSelectedPieceId(piece.id)
   }
 
   return (
@@ -107,7 +115,9 @@ function App() {
           </div>
         )}
 
-        {view === 'practice' && <PracticeView piece={selectedPiece} midi={midi} />}
+        {view === 'practice' && (
+          <PracticeView piece={selectedPiece} midi={midi} onUpdatePiece={handleUpdatePiece} />
+        )}
         {view === 'scales' && <ScalePractice midi={midi} />}
         {view === 'reading' && <ReadingPractice midi={midi} />}
       </main>
